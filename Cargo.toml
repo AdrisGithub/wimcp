@@ -1,0 +1,18 @@
+[package]
+name = "wimcp"
+version = "0.0.0"
+edition = "2021"
+authors = ["Adriiii"]
+description = "Wizards in Memory Cache Provider"
+readme = "README.md"
+repository = "https://github.com/AdrisGithub/wimcp"
+license = "GPL-2.0-or-later"
+documentation = "https://docs.rs/wimcp"
+exclude = ["src/resources/", ".github/", "sonar-project.properties"]
+
+
+[dependencies]
+aul = "1.3.1"
+whdp = "1.1.9"
+wjp = "1.0.2"
+wbsl = "0.0.2"
