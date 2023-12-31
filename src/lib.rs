@@ -50,10 +50,7 @@ impl Provider {
         Self::stream()
             .map(|mut stream| stream.write_ser(get(id)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
-            .map(|out: WIMCOutput| {
-                println!("{:?}", out);
-                out.map_ok(|val| T::try_from(val))
-            })??
+            .map(|out: WIMCOutput| out.map_ok(|val| T::try_from(val)))??
             .map_err(|_err| WIMCError)
     }
     pub fn query<T: Deserialize>(vec: Vec<&str>) -> Result<Vec<T>, WIMCError> {
