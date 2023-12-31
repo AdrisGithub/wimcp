@@ -20,8 +20,9 @@ impl Provider {
     pub fn store<T: Serialize>(
         ser: T,
         till: Option<Date>,
-        params: Vec<String>,
+        params: Vec<&str>,
     ) -> Result<u128, WIMCError> {
+        let params = params.iter().map(|&v| String::from(v)).collect();
         Self::stream()
             .map(|mut stream| stream.write_ser(store(ser, params, till)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
@@ -49,14 +50,30 @@ impl Provider {
         Self::stream()
             .map(|mut stream| stream.write_ser(get(id as usize)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
-            .map(|out: WIMCOutput| out.map_ok(|val| T::try_from(val)))??
+            .map(|out: WIMCOutput| {
+                println!("{:?}", out);
+                out.map_ok(|val| T::try_from(val))
+            })??
             .map_err(|_err| WIMCError)
     }
-    pub fn query<T: Deserialize>(vec: Vec<String>) -> Result<Vec<T>, WIMCError> {
+    pub fn query<T: Deserialize>(vec: Vec<&str>) -> Result<Vec<T>, WIMCError> {
+        let vec = vec.iter().map(|&v| String::from(v)).collect();
         Self::stream()
             .map(|mut stream| stream.write_ser(query(vec)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
             .map(|out: WIMCOutput| out.map_ok(Vec::try_from))??
+            .map(|arr: Vec<WIMCOutput>| {
+                arr.into_iter()
+                    .flat_map(|val| {
+                        let res = val.map_ok(|ok| T::try_from(ok));
+                        if let Ok(Ok(res)) = res {
+                            return Ok(res);
+                        }
+                        Err(WIMCError)
+                    })
+                    .collect()
+            })
+            .map_err(|_err| WIMCError)
             .map_err(|_err| WIMCError)
     }
     pub fn remove(id: u128) -> Result<(), WIMCError> {
@@ -95,5 +112,31 @@ impl Readwrite for TcpStream {
             .as_str(),
         )
         .map_err(|_err| WIMCError)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Read;
+    use std::net::TcpStream;
+
+    use wbdl::Date;
+    use wimcm::presets::query;
+
+    use crate::{Provider, Readwrite};
+
+    #[test]
+    pub fn test() {
+        let mut date = Date::now_unchecked();
+        date.add_year();
+        println!("{:?}", Provider::store("Hello", Some(date), vec!["Hello"]));
+
+        println!("{:?}", Provider::get::<String>(1));
+        println!("{:?}", Provider::query::<String>(vec!["Hello"]));
+        let mut stream = TcpStream::connect("0.0.0.0:6380").unwrap();
+        stream.write_ser(query(vec![String::from("Hello")]));
+        let mut string = String::new();
+        stream.read_to_string(&mut string);
+        println!("{}", string);
     }
 }
