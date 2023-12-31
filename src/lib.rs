@@ -1,8 +1,9 @@
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
+use wbdl::Date;
 use wimcm::{WIMCError, WIMCInput, WIMCOutput};
-use wimcm::presets::{cleanup, echo, get, ping, query};
+use wimcm::presets::{cleanup, echo, get, ping, query, store};
 use wimcm::WIMCMethods::Remove;
 use wjp::{Deserialize, Serialize};
 
@@ -10,16 +11,20 @@ use crate::r#const::{ADDRESS, DOUBLE_COLON, PORT};
 
 mod r#const;
 
-struct Provider;
-
-struct StoringBuilder;
+pub struct Provider;
 
 impl Provider {
     fn stream() -> Result<TcpStream, WIMCError> {
         TcpStream::connect(format!("{}{}{}", ADDRESS, DOUBLE_COLON, PORT)).map_err(|_err| WIMCError)
     }
-    pub fn store<T: Serialize>(ser: T) -> StoringBuilder {
-        StoringBuilder
+    pub fn store<T: Serialize>(ser: T,till: Option<Date>,params: Vec<String>) -> Result<u128,WIMCError> {
+        Self::stream().map(|mut stream|{
+            let _ = stream.write_ser(store(ser,params,till));
+            stream
+        }).map(|mut stream|{
+            let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
+            out
+        })?.map(|val| val.map_ok(u128::try_from))??.map_err(|_err|WIMCError)
     }
     pub fn echo(msg: &str) -> Result<String, WIMCError> {
         Self::stream()
@@ -30,8 +35,8 @@ impl Provider {
             .map(|mut stream| {
                 let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
                 out
-            })
-            .map(|out| out.map(|val| val.map_ok(String::try_from)))???
+            })?
+            .map(|out|out.map_ok(String::try_from))??
             .map_err(|_err| WIMCError)
     }
     pub fn ping() -> bool {
@@ -49,8 +54,8 @@ impl Provider {
             .map(|mut stream| {
                 let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
                 out
-            })
-            .map(|val| val.map(|val| val.map_ok(|val| T::try_from(val))))???
+            })?
+            .map(|val|  val.map_ok(|val| T::try_from(val)))??
             .map_err(|_err| WIMCError)
     }
     pub fn query<T: Deserialize>(vec: Vec<String>) -> Result<Vec<T>, WIMCError> {
@@ -62,8 +67,8 @@ impl Provider {
             .map(|mut stream| {
                 let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
                 out
-            })
-            .map(|val| val.map(|val| val.map_ok(Vec::try_from)))???
+            })?
+            .map(|val| val.map_ok(Vec::try_from))??
             .map_err(|_err| WIMCError)
     }
     pub fn remove(id: u128) -> Result<(), WIMCError> {
@@ -79,12 +84,12 @@ impl Provider {
     }
 }
 
-trait READWRITE {
+trait Readwrite {
     fn write_ser<T: Serialize>(&mut self, obj: T) -> Result<(), WIMCError>;
     fn read_ser<T: Deserialize>(&mut self) -> Result<T, WIMCError>;
 }
 
-impl READWRITE for TcpStream {
+impl Readwrite for TcpStream {
     fn write_ser<T: Serialize>(&mut self, obj: T) -> Result<(), WIMCError> {
         self.write_all(obj.json().as_bytes())
             .map_err(|_err| WIMCError)
