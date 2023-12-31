@@ -10,6 +10,7 @@ use wjp::{Deserialize, Serialize};
 use crate::r#const::{ADDRESS, DOUBLE_COLON, PORT};
 
 mod r#const;
+
 pub struct Provider;
 
 impl Provider {
@@ -22,60 +23,40 @@ impl Provider {
         params: Vec<String>,
     ) -> Result<u128, WIMCError> {
         Self::stream()
-            .map(|mut stream| {
-                let _ = stream.write_ser(store(ser, params, till));
-                stream
-            })
-            .map(|mut stream| {
-                let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
-                out
-            })?
-            .map(|val| val.map_ok(u128::try_from))??
+            .map(|mut stream| stream.write_ser(store(ser, params, till)).map(|_| stream))?
+            .map(|mut stream| stream.read_ser())?
+            .map(|out: WIMCOutput| out.map_ok(u128::try_from))??
             .map_err(|_err| WIMCError)
     }
     pub fn echo(msg: &str) -> Result<String, WIMCError> {
         Self::stream()
-            .map(|mut stream| {
-                let _ = stream.write_ser(echo(msg));
-                stream
-            })
-            .map(|mut stream| {
-                let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
-                out
-            })?
-            .map(|out| out.map_ok(String::try_from))??
+            .map(|mut stream| stream.write_ser(echo(msg)).map(|_| stream))?
+            .map(|mut stream| stream.read_ser())?
+            .map(|out: WIMCOutput| out.map_ok(String::try_from))??
             .map_err(|_err| WIMCError)
     }
     pub fn ping() -> bool {
-        Self::stream()
-            .map(|mut stream| stream.write_ser(ping()))
-            .map(|val| val.is_ok())
-            .is_ok_and(|val| val)
+        Self::internal_ping().is_ok()
+    }
+    fn internal_ping() -> Result<bool, WIMCError> {
+        Ok(Self::stream()
+            .map(|mut stream| stream.write_ser(ping()).map(|_| stream))?
+            .map(|mut stream| stream.read_ser())?
+            .map(|val: WIMCOutput| val.is_okay())
+            .is_ok_and(|val| val))
     }
     pub fn get<T: Deserialize>(id: u128) -> Result<T, WIMCError> {
         Self::stream()
-            .map(|mut stream| {
-                let _ = stream.write_ser(get(id as usize));
-                stream
-            })
-            .map(|mut stream| {
-                let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
-                out
-            })?
-            .map(|val| val.map_ok(|val| T::try_from(val)))??
+            .map(|mut stream| stream.write_ser(get(id as usize)).map(|_| stream))?
+            .map(|mut stream| stream.read_ser())?
+            .map(|out: WIMCOutput| out.map_ok(|val| T::try_from(val)))??
             .map_err(|_err| WIMCError)
     }
     pub fn query<T: Deserialize>(vec: Vec<String>) -> Result<Vec<T>, WIMCError> {
         Self::stream()
-            .map(|mut stream| {
-                let _ = stream.write_ser(query(vec));
-                stream
-            })
-            .map(|mut stream| {
-                let out: Result<WIMCOutput, WIMCError> = stream.read_ser();
-                out
-            })?
-            .map(|val| val.map_ok(Vec::try_from))??
+            .map(|mut stream| stream.write_ser(query(vec)).map(|_| stream))?
+            .map(|mut stream| stream.read_ser())?
+            .map(|out: WIMCOutput| out.map_ok(Vec::try_from))??
             .map_err(|_err| WIMCError)
     }
     pub fn remove(id: u128) -> Result<(), WIMCError> {
