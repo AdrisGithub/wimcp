@@ -48,7 +48,7 @@ impl Provider {
     }
     pub fn get<T: Deserialize>(id: u128) -> Result<T, WIMCError> {
         Self::stream()
-            .map(|mut stream| stream.write_ser(get(id as usize)).map(|_| stream))?
+            .map(|mut stream| stream.write_ser(get(id)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
             .map(|out: WIMCOutput| {
                 println!("{:?}", out);
@@ -117,13 +117,9 @@ impl Readwrite for TcpStream {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Read;
-    use std::net::TcpStream;
-
     use wbdl::Date;
-    use wimcm::presets::query;
 
-    use crate::{Provider, Readwrite};
+    use crate::Provider;
 
     #[test]
     pub fn test() {
@@ -133,10 +129,5 @@ mod tests {
 
         println!("{:?}", Provider::get::<String>(1));
         println!("{:?}", Provider::query::<String>(vec!["Hello"]));
-        let mut stream = TcpStream::connect("0.0.0.0:6380").unwrap();
-        stream.write_ser(query(vec![String::from("Hello")]));
-        let mut string = String::new();
-        stream.read_to_string(&mut string);
-        println!("{}", string);
     }
 }
