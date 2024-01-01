@@ -5,7 +5,7 @@ use wbdl::Date;
 use wimcm::presets::{cleanup, echo, get, ping, query, store};
 use wimcm::WIMCMethods::Remove;
 use wimcm::{WIMCError, WIMCInput, WIMCOutput};
-use wjp::{Deserialize, Serialize};
+use wjp::{Deserialize, ParseError, Serialize, Values};
 
 use crate::r#const::{ADDRESS, DOUBLE_COLON, PORT};
 
@@ -59,14 +59,10 @@ impl Provider {
             .map(|mut stream| stream.write_ser(query(vec)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
             .map(|out: WIMCOutput| out.map_ok(Vec::try_from))??
-            .map(|arr: Vec<WIMCOutput>| {
+            .map(|arr: Vec<Values>| {
                 arr.into_iter()
                     .flat_map(|val| {
-                        let res = val.map_ok(|ok| T::try_from(ok));
-                        if let Ok(Ok(res)) = res {
-                            return Ok(res);
-                        }
-                        Err(WIMCError)
+                        T::try_from(val).map_err(|_err|WIMCError)
                     })
                     .collect()
             })
@@ -125,6 +121,18 @@ mod tests {
         println!("{:?}", Provider::store("Hello", Some(date), vec!["Hello"]));
 
         println!("{:?}", Provider::get::<String>(1));
+
+    }
+    #[test]
+    pub fn query(){
         println!("{:?}", Provider::query::<String>(vec!["Hello"]));
+    }
+    #[test]
+    pub fn echo() {
+        println!("{:?}", Provider::echo("Hello"));
+    }
+    #[test]
+    pub fn ping() {
+        println!("{:?}", Provider::ping());
     }
 }
