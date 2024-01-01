@@ -1,6 +1,6 @@
 [package]
 name = "wimcp"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 authors = ["Adriiii"]
 description = "Wizards in Memory Cache Provider"
@@ -12,6 +12,6 @@ exclude = ["src/resources/", ".github/", "sonar-project.properties"]
 
 
 [dependencies]
-wjp = "1.1.2"
-wimcm = "0.2.4"
-wbdl = "1.1.0"
+wjp = "1.1.3"
+wimcm = "0.2.6"
+wbdl = "1.2.0"
