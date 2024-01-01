@@ -5,7 +5,7 @@ use wbdl::Date;
 use wimcm::presets::{cleanup, echo, get, ping, query, store};
 use wimcm::WIMCMethods::Remove;
 use wimcm::{WIMCError, WIMCInput, WIMCOutput};
-use wjp::{Deserialize, ParseError, Serialize, Values};
+use wjp::{Deserialize, Serialize, Values};
 
 use crate::r#const::{ADDRESS, DOUBLE_COLON, PORT};
 
@@ -53,19 +53,20 @@ impl Provider {
             .map(|out: WIMCOutput| out.map_ok(|val| T::try_from(val)))??
             .map_err(|_err| WIMCError)
     }
-    pub fn query<T: Deserialize>(vec: Vec<&str>) -> Result<Vec<T>, WIMCError> {
+    pub fn query<T: Deserialize>(vec: Vec<&str>) -> Result<Vec<T>,WIMCError> {
+        Ok(Self::query_raw(vec)?
+            .into_iter()
+            .flat_map(|val:Values|
+                T::try_from(val).map_err(|_err|WIMCError)
+            )
+            .collect::<Vec<T>>())
+    }
+    pub fn query_raw(vec: Vec<&str>) -> Result<Vec<Values>,WIMCError>{
         let vec = vec.iter().map(|&v| String::from(v)).collect();
         Self::stream()
             .map(|mut stream| stream.write_ser(query(vec)).map(|_| stream))?
             .map(|mut stream| stream.read_ser())?
             .map(|out: WIMCOutput| out.map_ok(Vec::try_from))??
-            .map(|arr: Vec<Values>| {
-                arr.into_iter()
-                    .flat_map(|val| {
-                        T::try_from(val).map_err(|_err|WIMCError)
-                    })
-                    .collect()
-            })
             .map_err(|_err| WIMCError)
             .map_err(|_err| WIMCError)
     }
