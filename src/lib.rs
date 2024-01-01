@@ -2,8 +2,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
 use wbdl::Date;
-use wimcm::{ADDRESS, DOUBLE_COLON, PORT, WIMCError, WIMCOutput};
 use wimcm::presets::{cleanup, echo, get, ping, query, remove, store};
+use wimcm::{WIMCError, WIMCOutput, ADDRESS, DOUBLE_COLON, PORT};
 use wjp::{Deserialize, Serialize, Values};
 
 pub struct Provider;
@@ -51,9 +51,7 @@ impl Provider {
     pub fn query<T: Deserialize>(vec: Vec<&str>) -> Result<Vec<T>, WIMCError> {
         Ok(Self::query_raw(vec)?
             .into_iter()
-            .flat_map(|val: Values|
-                T::try_from(val).map_err(|_err| WIMCError)
-            )
+            .flat_map(|val: Values| T::try_from(val).map_err(|_err| WIMCError))
             .collect::<Vec<T>>())
     }
     pub fn query_raw(vec: Vec<&str>) -> Result<Vec<Values>, WIMCError> {
@@ -91,10 +89,10 @@ impl Readwrite for TcpStream {
                     .map(|s| s.to_vec())
                     .map_err(|_err| WIMCError)?,
             )
-                .map_err(|_err| WIMCError)?
-                .as_str(),
+            .map_err(|_err| WIMCError)?
+            .as_str(),
         )
-            .map_err(|_err| WIMCError)
+        .map_err(|_err| WIMCError)
     }
 }
 
@@ -106,7 +104,14 @@ mod tests {
 
     #[test]
     pub fn test() {
-        println!("{:?}", Provider::store("Hello", Some(Date::now_unchecked().add_year()), vec!["Hello"]));
+        println!(
+            "{:?}",
+            Provider::store(
+                "Hello",
+                Some(Date::now_unchecked().add_year()),
+                vec!["Hello"]
+            )
+        );
 
         println!("{:?}", Provider::get::<String>(1));
 
@@ -114,7 +119,14 @@ mod tests {
     }
     #[test]
     pub fn remove() {
-        println!("{:?}", Provider::store("Hello", Some(Date::now_unchecked().add_year()), vec!["Hello"]));
+        println!(
+            "{:?}",
+            Provider::store(
+                "Hello",
+                Some(Date::now_unchecked().add_year()),
+                vec!["Hello"]
+            )
+        );
         println!("{:?}", Provider::get::<String>(0));
         println!("{:?}", Provider::remove(0));
         println!("{:?}", Provider::get::<String>(0));
