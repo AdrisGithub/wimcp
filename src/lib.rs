@@ -109,8 +109,16 @@ mod tests {
         println!("{:?}", Provider::store("Hello", Some(Date::now_unchecked().add_year()), vec!["Hello"]));
 
         println!("{:?}", Provider::get::<String>(1));
-    }
 
+        println!("{:?}", Provider::get::<String>(1));
+    }
+    #[test]
+    pub fn remove() {
+        println!("{:?}", Provider::store("Hello", Some(Date::now_unchecked().add_year()), vec!["Hello"]));
+        println!("{:?}", Provider::get::<String>(0));
+        println!("{:?}", Provider::remove(0));
+        println!("{:?}", Provider::get::<String>(0));
+    }
     #[test]
     pub fn query() {
         println!("{:?}", Provider::query::<String>(vec!["Hello"]));
